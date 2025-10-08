@@ -57,6 +57,9 @@ class Program
                 services.AddSingleton<IAuditLogger, AuditLogger>();
                 services.AddSingleton<IPrivilegeEscalator, PrivilegeEscalator>();
                 
+                // Register storage services
+                services.AddSingleton<TotpStorage>();
+                
                 // Register root authentication service
                 services.AddSingleton<RootAuthenticationService>();
                 
@@ -67,6 +70,7 @@ class Program
                 services.AddTransient<StatusCommand>();
                 services.AddTransient<TestCommand>();
                 services.AddTransient<DemoCommand>();
+                services.AddTransient<InteractiveDemoCommand>();
             })
             .ConfigureLogging(logging =>
             {
@@ -146,6 +150,14 @@ class Program
             await handler.ExecuteAsync();
         });
 
+        // Interactive demo with current TOTP codes
+        var interactiveDemo = new Command("live-demo", "Interactive demo with real TOTP codes and flow explanation");
+        interactiveDemo.SetHandler(async () =>
+        {
+            var handler = services.GetRequiredService<InteractiveDemoCommand>();
+            await handler.ExecuteAsync();
+        });
+
         rootCommand.AddCommand(setupCommand);
         rootCommand.AddCommand(execCommand);
         rootCommand.AddCommand(suCommand);
@@ -153,6 +165,7 @@ class Program
         rootCommand.AddCommand(statusCommand);
         rootCommand.AddCommand(testCommand);
         rootCommand.AddCommand(demoCommand);
+        rootCommand.AddCommand(interactiveDemo);
 
         return rootCommand;
     }

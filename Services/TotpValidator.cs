@@ -6,7 +6,7 @@ namespace SecureRootGuard.Services;
 
 public class TotpValidator : ITotpValidator
 {
-    private readonly IMemoryVault _memoryVault;
+    private readonly TotpStorage _storage;
     private readonly IAuditLogger _auditLogger;
     private readonly ILogger<TotpValidator> _logger;
     
@@ -14,11 +14,11 @@ public class TotpValidator : ITotpValidator
     private const int TotpDigits = 6;
 
     public TotpValidator(
-        IMemoryVault memoryVault,
+        TotpStorage storage,
         IAuditLogger auditLogger,
         ILogger<TotpValidator> logger)
     {
-        _memoryVault = memoryVault;
+        _storage = storage;
         _auditLogger = auditLogger;
         _logger = logger;
     }
@@ -29,16 +29,14 @@ public class TotpValidator : ITotpValidator
         {
             _logger.LogDebug("Validating TOTP code for user: {UserId}", userId);
 
-            // Retrieve encrypted secret
-            var secretData = await _memoryVault.RetrieveSecureDataAsync($"totp_secret_{userId}");
-            if (secretData == null)
+            // Retrieve secret from persistent storage
+            var secret = await _storage.GetSecretAsync(userId);
+            if (string.IsNullOrEmpty(secret))
             {
                 _logger.LogWarning("No TOTP secret found for user: {UserId}", userId);
                 await _auditLogger.LogSecurityEventAsync(SecurityEvent.TotpValidationFailure, userId, "No TOTP secret configured");
                 return false;
             }
-
-            var secret = Encoding.UTF8.GetString(secretData);
             var secretBytes = Base32Encoding.ToBytes(secret);
 
             // Create TOTP instance
@@ -91,10 +89,8 @@ public class TotpValidator : ITotpValidator
 
             var secret = Base32Encoding.ToString(secretBytes);
 
-            // Store encrypted secret
-            var secretData = Encoding.UTF8.GetBytes(secret);
-            await _memoryVault.StoreSecureDataAsync(secretData, expiration: null); // No expiration for TOTP secrets
-            await _memoryVault.StoreSecureDataAsync(secretData, expiration: null); // Store with user key
+            // Store secret in persistent storage
+            await _storage.StoreSecretAsync(userId, secret);
             
             // Create provisioning URI for QR code
             var accountName = $"{userId}@{Environment.MachineName}";
@@ -126,8 +122,7 @@ public class TotpValidator : ITotpValidator
     {
         try
         {
-            var secretData = await _memoryVault.RetrieveSecureDataAsync($"totp_secret_{userId}");
-            return secretData != null;
+            return await _storage.HasSecretAsync(userId);
         }
         catch (Exception ex)
         {
