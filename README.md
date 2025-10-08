@@ -4,6 +4,26 @@
 
 SecureRootGuard is a security framework that protects root privilege escalation using Time-based One-Time Passwords (TOTP), session monitoring, and advanced memory encryption. It integrates with existing authentication systems while providing zero-trust privilege management.
 
+## 🔑 Interactive Root Sessions
+
+**SecureRootGuard provides true interactive root shell sessions that:**
+
+- ✅ **Starts persistent root sessions** in terminal without needing application commands for each root operation
+- ✅ **Requires two-factor authentication** (TOTP + root password) before granting access
+- ✅ **Automatically cleans up sessions** when you exit the root shell or session times out
+- ✅ **Provides standard shell experience** with full root privileges, tab completion, and command history
+- ✅ **Time-limited sessions** with configurable timeout (default 15 minutes) for enhanced security
+- ✅ **Complete audit trail** of all session activities and privilege escalations
+
+### How It Works
+
+1. **Authentication**: Run `sudo securerootguard session` → Enter TOTP code → Enter root password
+2. **Interactive Session**: Get a real bash shell with root privileges (`# prompt`)
+3. **Natural Usage**: Execute multiple commands without re-authentication
+4. **Automatic Cleanup**: Session ends when you `exit` or timeout expires
+
+This eliminates the need to re-authenticate for every single root command while maintaining strict security controls and full session auditing.
+
 ## 🎯 Features
 
 - **🔐 TOTP-Protected Sudo**: Require 2FA for all privilege escalations
