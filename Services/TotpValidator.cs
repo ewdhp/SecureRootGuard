@@ -1,6 +1,4 @@
 using Microsoft.Extensions.Logging;
-using OtpNet;
-using QRCoder;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -44,7 +42,7 @@ public class TotpValidator : ITotpValidator
             var secretBytes = Base32Encoding.ToBytes(secret);
 
             // Create TOTP instance
-            var totp = new Totp(secretBytes, step: TotpWindowSeconds, totpSize: TotpDigits);
+            var totp = new Totp(secretBytes, step: TotpWindowSeconds, digits: TotpDigits);
 
             // Validate current window and adjacent windows (for clock skew tolerance)
             var currentTime = DateTime.UtcNow;
@@ -142,11 +140,7 @@ public class TotpValidator : ITotpValidator
     {
         try
         {
-            using var qrGenerator = new QRCodeGenerator();
-            var qrCodeData = qrGenerator.CreateQrCode(provisioningUri, QRCodeGenerator.ECCLevel.Q);
-            
-            using var qrCode = new AsciiQRCode(qrCodeData);
-            return qrCode.GetGraphic(1);
+            return QrCodeGenerator.GenerateQrCode(provisioningUri);
         }
         catch (Exception ex)
         {

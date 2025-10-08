@@ -208,7 +208,10 @@ public class AuditLogger : IAuditLogger
     public AuditLogger(ILogger<AuditLogger> logger)
     {
         _logger = logger;
-        _auditPath = "/var/log/securerootguard/audit.log";
+        
+        // Use user-accessible path for development/testing
+        var logDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".securerootguard", "logs");
+        _auditPath = Path.Combine(logDir, "audit.log");
         
         // Ensure audit directory exists
         Directory.CreateDirectory(Path.GetDirectoryName(_auditPath)!);

@@ -77,31 +77,35 @@ class Program
 
         // Setup command: Initialize TOTP for user
         var setupCommand = new Command("setup", "Initialize TOTP authentication for a user");
-        setupCommand.AddOption(new Option<string>("--user", "Username to setup") { IsRequired = true });
-        setupCommand.AddOption(new Option<string>("--issuer", () => "SecureRootGuard", "TOTP issuer name"));
+        var userOption = new Option<string>("--user", "Username to setup") { IsRequired = true };
+        var issuerOption = new Option<string>("--issuer", () => "SecureRootGuard", "TOTP issuer name");
+        setupCommand.AddOption(userOption);
+        setupCommand.AddOption(issuerOption);
         setupCommand.SetHandler(async (user, issuer) =>
         {
             var handler = services.GetRequiredService<SetupCommand>();
             await handler.ExecuteAsync(user, issuer);
-        }, setupCommand.Options.Cast<Option<string>>().ToArray());
+        }, userOption, issuerOption);
 
         // Exec command: Execute command with root privileges
         var execCommand = new Command("exec", "Execute command with TOTP-protected root privileges");
-        execCommand.AddOption(new Option<string[]>("--", "Command and arguments to execute") { IsRequired = true, AllowMultipleArgumentsPerToken = true });
+        var commandOption = new Option<string[]>("--command", "Command and arguments to execute") { IsRequired = true, AllowMultipleArgumentsPerToken = true };
+        execCommand.AddOption(commandOption);
         execCommand.SetHandler(async (command) =>
         {
             var handler = services.GetRequiredService<ExecCommand>();
             await handler.ExecuteAsync(command);
-        }, execCommand.Options.Cast<Option<string[]>>().First());
+        }, commandOption);
 
         // Session command: Start interactive root session
         var sessionCommand = new Command("session", "Start time-limited interactive root session");
-        sessionCommand.AddOption(new Option<int>("--timeout", () => 15, "Session timeout in minutes"));
+        var timeoutOption = new Option<int>("--timeout", () => 15, "Session timeout in minutes");
+        sessionCommand.AddOption(timeoutOption);
         sessionCommand.SetHandler(async (timeout) =>
         {
             var handler = services.GetRequiredService<SessionCommand>();
             await handler.ExecuteAsync(timeout);
-        }, sessionCommand.Options.Cast<Option<int>>().First());
+        }, timeoutOption);
 
         // Status command: Show active sessions and system status
         var statusCommand = new Command("status", "Display active sessions and system status");
