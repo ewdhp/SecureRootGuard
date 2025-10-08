@@ -57,12 +57,16 @@ class Program
                 services.AddSingleton<IAuditLogger, AuditLogger>();
                 services.AddSingleton<IPrivilegeEscalator, PrivilegeEscalator>();
                 
+                // Register root authentication service
+                services.AddSingleton<RootAuthenticationService>();
+                
                 // Register command handlers
                 services.AddTransient<SetupCommand>();
                 services.AddTransient<ExecCommand>();
                 services.AddTransient<SessionCommand>();
                 services.AddTransient<StatusCommand>();
                 services.AddTransient<TestCommand>();
+                services.AddTransient<DemoCommand>();
             })
             .ConfigureLogging(logging =>
             {
@@ -88,7 +92,7 @@ class Program
         }, userOption, issuerOption);
 
         // Exec command: Execute command with root privileges
-        var execCommand = new Command("exec", "Execute command with TOTP-protected root privileges");
+        var execCommand = new Command("exec", "Execute command with TOTP + sudo/root password protection");
         var commandOption = new Option<string[]>("--command", "Command and arguments to execute") { IsRequired = true, AllowMultipleArgumentsPerToken = true };
         execCommand.AddOption(commandOption);
         execCommand.SetHandler(async (command) =>
@@ -96,6 +100,17 @@ class Program
             var handler = services.GetRequiredService<ExecCommand>();
             await handler.ExecuteAsync(command);
         }, commandOption);
+
+        // Su command: Execute with su instead of sudo
+        var suCommand = new Command("su", "Execute command with TOTP + root password (using su)");
+        var suCommandOption = new Option<string[]>("--command", "Command and arguments to execute") { IsRequired = true, AllowMultipleArgumentsPerToken = true };
+        suCommand.AddOption(suCommandOption);
+        suCommand.SetHandler(async (command) =>
+        {
+            var rootAuthService = services.GetRequiredService<RootAuthenticationService>();
+            var result = await rootAuthService.AuthenticateAndExecuteAsync(command[0], command.Skip(1).ToArray(), useSuper: false);
+            Environment.Exit(result.ExitCode);
+        }, suCommandOption);
 
         // Session command: Start interactive root session
         var sessionCommand = new Command("session", "Start time-limited interactive root session");
@@ -123,11 +138,21 @@ class Program
             await handler.ExecuteAsync();
         });
 
+        // Demo command: Show complete authentication flow
+        var demoCommand = new Command("demo", "Demonstrate TOTP + root password authentication flow");
+        demoCommand.SetHandler(async () =>
+        {
+            var handler = services.GetRequiredService<DemoCommand>();
+            await handler.ExecuteAsync();
+        });
+
         rootCommand.AddCommand(setupCommand);
         rootCommand.AddCommand(execCommand);
+        rootCommand.AddCommand(suCommand);
         rootCommand.AddCommand(sessionCommand);
         rootCommand.AddCommand(statusCommand);
         rootCommand.AddCommand(testCommand);
+        rootCommand.AddCommand(demoCommand);
 
         return rootCommand;
     }
